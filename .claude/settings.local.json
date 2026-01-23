@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tree:*)",
+      "Bash(node ace:*)",
+      "WebFetch(domain:docs.adonisjs.com)",
+      "Bash(pnpm add:*)",
+      "Bash(pnpm install:*)",
+      "Bash(pnpm approve-builds:*)",
+      "Bash(pnpm build:*)",
+      "Bash(node dist/yabetoo.js:*)",
+      "Bash(npm run typecheck:*)",
+      "Bash(pnpm typecheck:*)",
+      "Bash(yabetoo login --help:*)",
+      "Bash(git init:*)",
+      "Bash(git remote add:*)",
+      "Bash(git -C /Users/trafalgar/Lab/Yabetoo/CLI status)",
+      "Bash(git -C /Users/trafalgar/Lab/Yabetoo/CLI add .)"
+    ]
+  }
+}
