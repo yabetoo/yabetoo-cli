@@ -177,7 +177,7 @@ export async function login(options: LoginOptions): Promise<void> {
       logger.dim('')
       logger.error(`Authorization failed: ${result.message || result.error}`)
       process.exit(1)
-    } catch (error) {
+    } catch {
       attempts++
       // Network error, continue trying
       continue

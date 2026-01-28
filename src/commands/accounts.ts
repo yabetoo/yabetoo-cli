@@ -55,7 +55,7 @@ export async function listAccounts(): Promise<void> {
     })
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Unknown error' }))
+      const error = await response.json().catch(() => ({ message: 'Unknown error' })) as { message?: string }
       throw new Error(error.message || `Failed to get accounts: ${response.status}`)
     }
 
@@ -123,7 +123,7 @@ export async function switchAccount(accountId: string): Promise<void> {
     })
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Unknown error' }))
+      const error = await response.json().catch(() => ({ message: 'Unknown error' })) as { message?: string }
       throw new Error(error.message || `Failed to switch account: ${response.status}`)
     }
 
