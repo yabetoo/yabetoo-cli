@@ -5,7 +5,7 @@
   "type": "module",
   "license": "MIT",
   "bin": {
-    "yabetoo": "./dist/bin/yabetoo.js"
+    "yabetoo": "./dist/yabetoo.js"
   },
   "files": [
     "dist"
@@ -13,7 +13,7 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
-    "start": "node dist/bin/yabetoo.js",
+    "start": "node dist/yabetoo.js",
     "lint": "eslint src",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
