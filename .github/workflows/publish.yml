@@ -1,0 +1,62 @@
+name: Publish @yabetoo/cli to npm
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check tag matches package.json version
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          PKG_NAME=$(node -p "require('./package.json').name")
+          PKG_VERSION=$(node -p "require('./package.json').version")
+
+          echo "Tag version:       $TAG"
+          echo "package.json name: $PKG_NAME"
+          echo "package.json ver:  $PKG_VERSION"
+
+          if [ "$PKG_NAME" != "@yabetoo/cli" ]; then
+            echo "ERROR: package name mismatch. Expected @yabetoo/cli"
+            exit 1
+          fi
+
+          if [ "$TAG" != "$PKG_VERSION" ]; then
+            echo "ERROR: Tag (v$TAG) does not match package.json version ($PKG_VERSION)"
+            exit 1
+          fi
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
+
+      - name: Publish to npm (public)
+        run: pnpm publish --access public --no-git-checks
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

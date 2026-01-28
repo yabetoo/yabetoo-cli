@@ -3,7 +3,7 @@ import type { Config } from "./types.js";
 /**
  * Default URLs
  */
-const DEFAULT_WEBHOOK_SERVICE_URL = "https://webhook.yabetoopay.com";
+const DEFAULT_WEBHOOK_SERVICE_URL = "https://webhook.yabetoo.com";
 const DEFAULT_ACCOUNT_SERVICE_URL = "https://account.api.yabetoopay.com";
 
 /**
