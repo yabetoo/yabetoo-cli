@@ -1,6 +1,6 @@
 {
   "name": "@yabetoo/cli",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Yabetoo CLI for local development and webhook testing",
   "type": "module",
   "license": "MIT",
