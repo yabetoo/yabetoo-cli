@@ -1,35 +1,75 @@
 import { logger } from '../logger.js'
 import { loadConfig } from '../config.js'
+import { saveCredentials } from '../credentials.js'
 import { ensureFreshCredentials } from '../oauth.js'
 
 /**
- * Account info from API
+ * `AccountResource` returned by the SSO (`GET /api/v1/accounts`, Stripe-shape).
  */
-interface AccountInfo {
+export interface SsoAccount {
   id: string
+  object: 'account'
+  organization_id: string
+  environment: 'test' | 'live'
+  type: string
   name: string
-  isLive: boolean
-  isCurrent: boolean
+  status: string
 }
 
 /**
- * Response from get accounts endpoint
+ * Stripe-shape cursor list envelope (SSO `CursorCollection`)
  */
-interface GetAccountsResponse {
-  currentAccountId: string
-  accounts: AccountInfo[]
+export interface SsoListResponse<T> {
+  object: 'list'
+  data: T[]
+  has_more: boolean
+  next_cursor: string | null
 }
 
 /**
- * Response from switch account endpoint
+ * Defensive cap on cursor pagination so a misbehaving cursor can't spin forever
  */
-interface SwitchAccountResponse {
-  message: string
-  account: {
-    id: string
-    name: string
-    isLive: boolean
+const MAX_PAGES = 50
+
+/**
+ * Fetch every account the user can read from the SSO, following the
+ * Stripe-shape cursor pagination (`starting_after` / `next_cursor`).
+ */
+export async function fetchAllAccounts(ssoUrl: string, accessToken: string): Promise<SsoAccount[]> {
+  const baseUrl = ssoUrl.replace(/\/$/, '')
+  const accounts: SsoAccount[] = []
+  let cursor: string | null = null
+
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const url = new URL(`${baseUrl}/api/v1/accounts`)
+    if (cursor) {
+      url.searchParams.set('starting_after', cursor)
+    }
+
+    const response = await fetch(url.toString(), {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
+    })
+
+    if (!response.ok) {
+      const body = (await response.json().catch(() => ({}))) as { message?: string; error?: { message?: string } }
+      const message = body.error?.message || body.message
+      throw new Error(message || `Failed to get accounts: ${response.status}`)
+    }
+
+    const list = (await response.json()) as SsoListResponse<SsoAccount>
+    accounts.push(...(list.data ?? []))
+
+    if (!list.has_more || !list.next_cursor) {
+      return accounts
+    }
+    cursor = list.next_cursor
   }
+
+  return accounts
 }
 
 /**
@@ -44,24 +84,12 @@ export async function listAccounts(): Promise<void> {
     process.exit(1)
   }
 
-  const accountServiceUrl = config.accountServiceUrl
+  const ssoUrl = credentials.ssoUrl || config.ssoUrl
 
   try {
-    const response = await fetch(`${accountServiceUrl}/v1/cli/auth/accounts`, {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${credentials.accessToken}`,
-      },
-    })
+    const accounts = await fetchAllAccounts(ssoUrl, credentials.accessToken)
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Unknown error' })) as { message?: string }
-      throw new Error(error.message || `Failed to get accounts: ${response.status}`)
-    }
-
-    const data = (await response.json()) as GetAccountsResponse
-
-    if (data.accounts.length === 0) {
+    if (accounts.length === 0) {
       logger.info('No accounts found.')
       return
     }
@@ -70,11 +98,12 @@ export async function listAccounts(): Promise<void> {
     logger.info('Your accounts:')
     logger.dim('')
 
-    for (const account of data.accounts) {
-      const currentMarker = account.isCurrent ? ' (current)' : ''
-      const modeMarker = account.isLive ? '[live]' : '[test]'
+    for (const account of accounts) {
+      const isCurrent = account.id === credentials.accountId
+      const currentMarker = isCurrent ? ' (current)' : ''
+      const modeMarker = `[${account.environment}]`
 
-      if (account.isCurrent) {
+      if (isCurrent) {
         console.log(`  * ${account.name} ${modeMarker}${currentMarker}`)
         console.log(`    ${account.id}`)
       } else {
@@ -92,7 +121,8 @@ export async function listAccounts(): Promise<void> {
 }
 
 /**
- * Switch to a different account
+ * Switch to a different account (selection is stored locally — the SSO has no
+ * server-side "current account" notion)
  */
 export async function switchAccount(accountId: string): Promise<void> {
   const config = loadConfig()
@@ -111,28 +141,26 @@ export async function switchAccount(accountId: string): Promise<void> {
     process.exit(1)
   }
 
-  const accountServiceUrl = config.accountServiceUrl
+  const ssoUrl = credentials.ssoUrl || config.ssoUrl
 
   try {
-    const response = await fetch(`${accountServiceUrl}/v1/cli/auth/accounts/switch`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${credentials.accessToken}`,
-      },
-      body: JSON.stringify({ accountId }),
-    })
+    const accounts = await fetchAllAccounts(ssoUrl, credentials.accessToken)
+    const account = accounts.find((candidate) => candidate.id === accountId)
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Unknown error' })) as { message?: string }
-      throw new Error(error.message || `Failed to switch account: ${response.status}`)
+    if (!account) {
+      logger.error(`Account "${accountId}" not found among your accounts.`)
+      logger.dim('Run "yabetoo accounts" to see available accounts.')
+      process.exit(1)
     }
 
-    const data = (await response.json()) as SwitchAccountResponse
+    saveCredentials({
+      ...credentials,
+      accountId: account.id,
+    })
 
-    logger.success(`Switched to account: ${data.account.name}`)
-    logger.dim(`Account ID: ${data.account.id}`)
-    logger.dim(`Mode: ${data.account.isLive ? 'live' : 'test'}`)
+    logger.success(`Switched to account: ${account.name}`)
+    logger.dim(`Account ID: ${account.id}`)
+    logger.dim(`Environment: ${account.environment}`)
   } catch (error) {
     logger.error(`Failed to switch account: ${error instanceof Error ? error.message : error}`)
     process.exit(1)
