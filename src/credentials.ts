@@ -12,6 +12,8 @@ export interface CliCredentials {
   expiresAt: string
   ssoUrl?: string
   webhookServiceUrl?: string
+  /** Currently selected account (`acct_*`), set by `yabetoo switch` */
+  accountId?: string
 }
 
 /**
