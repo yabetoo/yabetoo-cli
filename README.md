@@ -82,7 +82,23 @@ yabetoo listen --forward-to http://localhost:3333/webhooks --webhook-service-url
 |----------|-------------|
 | `YABETOO_API_KEY` | Your Yabetoo API key (sk_test_xxx or sk_live_xxx) |
 | `YABETOO_WEBHOOK_SERVICE_URL` | Custom webhook service URL |
+| `YABETOO_SSO_URL` | Yabetoo SSO URL used by `yabetoo login` (default: https://sso.yabetoo.com) |
+| `YABETOO_CLI_OAUTH_CLIENT_ID` | OAuth client id for the device flow (defaults to the dev client id) |
 | `YABETOO_ACCOUNT_ID` | Account ID (optional, extracted from API key) |
+
+## Authentication
+
+`yabetoo listen` accepts either an API key (`--api-key` / `YABETOO_API_KEY`) or a
+browser login via the OAuth 2.0 device authorization grant (RFC 8628):
+
+```bash
+yabetoo login    # prints a code, opens the SSO verification page in your browser
+yabetoo status   # show the current session
+yabetoo logout   # remove stored credentials
+```
+
+Tokens are stored in `~/.yabetoo/credentials.json` and refreshed automatically
+(the SSO rotates the refresh token on every refresh).
 
 ## Verifying Webhook Signatures
 

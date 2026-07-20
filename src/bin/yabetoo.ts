@@ -13,14 +13,14 @@ program
 // Login command
 program
   .command('login')
-  .description('Authenticate with Yabetoo via browser')
+  .description('Authenticate with Yabetoo via browser (OAuth device flow)')
   .option(
-    '--account-service-url <url>',
-    'Account service URL (for local development)'
+    '--sso-url <url>',
+    'Yabetoo SSO URL (for local development, e.g. http://localhost:8000)'
   )
   .action(async (options) => {
     await login({
-      accountServiceUrl: options.accountServiceUrl,
+      ssoUrl: options.ssoUrl,
     })
   })
 

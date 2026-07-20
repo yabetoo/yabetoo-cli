@@ -1,6 +1,6 @@
 import { logger } from '../logger.js'
 import { loadConfig } from '../config.js'
-import { loadCredentials, saveCredentials } from '../credentials.js'
+import { ensureFreshCredentials } from '../oauth.js'
 
 /**
  * Account info from API
@@ -37,20 +37,20 @@ interface SwitchAccountResponse {
  */
 export async function listAccounts(): Promise<void> {
   const config = loadConfig()
-  const credentials = loadCredentials()
+  const credentials = await ensureFreshCredentials(config)
 
   if (!credentials) {
     logger.error('Not logged in. Please run "yabetoo login" first.')
     process.exit(1)
   }
 
-  const accountServiceUrl = credentials.accountServiceUrl || config.accountServiceUrl
+  const accountServiceUrl = config.accountServiceUrl
 
   try {
     const response = await fetch(`${accountServiceUrl}/v1/cli/auth/accounts`, {
       method: 'GET',
       headers: {
-        Authorization: `Bearer ${credentials.cliToken}`,
+        Authorization: `Bearer ${credentials.accessToken}`,
       },
     })
 
@@ -96,12 +96,6 @@ export async function listAccounts(): Promise<void> {
  */
 export async function switchAccount(accountId: string): Promise<void> {
   const config = loadConfig()
-  const credentials = loadCredentials()
-
-  if (!credentials) {
-    logger.error('Not logged in. Please run "yabetoo login" first.')
-    process.exit(1)
-  }
 
   if (!accountId) {
     logger.error('Account ID is required.')
@@ -110,14 +104,21 @@ export async function switchAccount(accountId: string): Promise<void> {
     process.exit(1)
   }
 
-  const accountServiceUrl = credentials.accountServiceUrl || config.accountServiceUrl
+  const credentials = await ensureFreshCredentials(config)
+
+  if (!credentials) {
+    logger.error('Not logged in. Please run "yabetoo login" first.')
+    process.exit(1)
+  }
+
+  const accountServiceUrl = config.accountServiceUrl
 
   try {
     const response = await fetch(`${accountServiceUrl}/v1/cli/auth/accounts/switch`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${credentials.cliToken}`,
+        Authorization: `Bearer ${credentials.accessToken}`,
       },
       body: JSON.stringify({ accountId }),
     })
@@ -128,12 +129,6 @@ export async function switchAccount(accountId: string): Promise<void> {
     }
 
     const data = (await response.json()) as SwitchAccountResponse
-
-    // Update local credentials with new account ID
-    saveCredentials({
-      ...credentials,
-      accountId: data.account.id,
-    })
 
     logger.success(`Switched to account: ${data.account.name}`)
     logger.dim(`Account ID: ${data.account.id}`)

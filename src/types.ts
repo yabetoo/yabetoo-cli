@@ -44,6 +44,8 @@ export interface Config {
   apiKey?: string
   webhookServiceUrl: string
   accountServiceUrl: string
+  ssoUrl: string
+  oauthClientId: string
   accountId?: string
 }
 

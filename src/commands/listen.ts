@@ -2,7 +2,7 @@ import { HttpClient, forwardWebhook } from '../http-client.js'
 import { SSEClient } from '../sse-client.js'
 import { logger } from '../logger.js'
 import { loadConfig, validateApiKey, getEnvironment } from '../config.js'
-import { loadCredentials } from '../credentials.js'
+import { ensureFreshCredentials } from '../oauth.js'
 import type { ListenOptions, DevListenerWebhookMessage } from '../types.js'
 
 /**
@@ -11,19 +11,20 @@ import type { ListenOptions, DevListenerWebhookMessage } from '../types.js'
 export async function listen(options: ListenOptions): Promise<void> {
   // Load config and merge with options
   const config = loadConfig()
-  const credentials = loadCredentials()
 
   // Determine authentication method
-  let apiKey = options.apiKey || config.apiKey
-  let accountId = config.accountId
-  let authMethod: 'api_key' | 'cli_token' = 'api_key'
-  let cliToken: string | undefined
+  const apiKey = options.apiKey || config.apiKey
+  const accountId = config.accountId
+  let authMethod: 'api_key' | 'oauth' = 'api_key'
+  let accessToken: string | undefined
 
-  // If no API key provided, try to use stored credentials
-  if (!apiKey && credentials) {
-    cliToken = credentials.cliToken
-    accountId = credentials.accountId
-    authMethod = 'cli_token'
+  // If no API key provided, try to use stored OAuth credentials (refreshed if needed)
+  if (!apiKey) {
+    const credentials = await ensureFreshCredentials(config)
+    if (credentials) {
+      accessToken = credentials.accessToken
+      authMethod = 'oauth'
+    }
   }
 
   const webhookServiceUrl = options.webhookServiceUrl || config.webhookServiceUrl
@@ -31,7 +32,7 @@ export async function listen(options: ListenOptions): Promise<void> {
   const events = options.events || []
 
   // Validate authentication
-  if (!apiKey && !cliToken) {
+  if (!apiKey && !accessToken) {
     logger.error('Not authenticated. Please run "yabetoo login" first or provide --api-key.')
     process.exit(1)
   }
@@ -43,9 +44,11 @@ export async function listen(options: ListenOptions): Promise<void> {
 
   // Log environment
   logger.banner()
-  if (authMethod === 'cli_token') {
+  if (authMethod === 'oauth') {
     logger.info('Using stored credentials')
-    logger.dim(`Account ID: ${accountId}`)
+    if (accountId) {
+      logger.dim(`Account ID: ${accountId}`)
+    }
   } else {
     const env = getEnvironment(apiKey!)
     logger.info(`Environment: ${env}`)
@@ -56,8 +59,9 @@ export async function listen(options: ListenOptions): Promise<void> {
   // Create HTTP client with appropriate auth
   const httpClient = new HttpClient(
     webhookServiceUrl,
-    apiKey || cliToken!,
-    accountId
+    apiKey || accessToken!,
+    accountId,
+    authMethod === 'oauth' ? 'Bearer' : 'ApiKey'
   )
 
   // Register dev listener

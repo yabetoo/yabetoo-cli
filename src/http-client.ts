@@ -7,11 +7,18 @@ export class HttpClient {
   private readonly baseUrl: string
   private readonly apiKey: string
   private readonly accountId?: string
+  private readonly authScheme: 'ApiKey' | 'Bearer'
 
-  constructor(baseUrl: string, apiKey: string, accountId?: string) {
+  constructor(
+    baseUrl: string,
+    apiKey: string,
+    accountId?: string,
+    authScheme: 'ApiKey' | 'Bearer' = 'ApiKey'
+  ) {
     this.baseUrl = baseUrl.replace(/\/$/, '')
     this.apiKey = apiKey
     this.accountId = accountId
+    this.authScheme = authScheme
   }
 
   /**
@@ -25,7 +32,7 @@ export class HttpClient {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `ApiKey ${this.apiKey}`,
+        Authorization: `${this.authScheme} ${this.apiKey}`,
         ...(this.accountId ? { 'X-Account-Id': this.accountId } : {}),
       },
       body: JSON.stringify({ forwardTo, events }),
@@ -46,7 +53,7 @@ export class HttpClient {
     const response = await fetch(`${this.baseUrl}/v1/dev/listeners/${sessionId}/heartbeat`, {
       method: 'POST',
       headers: {
-        Authorization: `ApiKey ${this.apiKey}`,
+        Authorization: `${this.authScheme} ${this.apiKey}`,
       },
     })
 
@@ -63,7 +70,7 @@ export class HttpClient {
       await fetch(`${this.baseUrl}/v1/dev/listeners/${sessionId}`, {
         method: 'DELETE',
         headers: {
-          Authorization: `ApiKey ${this.apiKey}`,
+          Authorization: `${this.authScheme} ${this.apiKey}`,
         },
       })
     } catch {
@@ -76,7 +83,7 @@ export class HttpClient {
    */
   getAuthHeaders(): Record<string, string> {
     return {
-      Authorization: `ApiKey ${this.apiKey}`,
+      Authorization: `${this.authScheme} ${this.apiKey}`,
       Accept: 'text/event-stream',
     }
   }
