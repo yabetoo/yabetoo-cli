@@ -26,15 +26,10 @@ describe('credentials', () => {
   })
 
   const validCredentials: CliCredentials = {
-    cliToken: 'token_abc',
-    accountId: 'acct_123',
-    expiresAt: new Date(Date.now() + 86400000).toISOString(),
-  }
-
-  const expiredCredentials: CliCredentials = {
-    cliToken: 'token_old',
-    accountId: 'acct_456',
-    expiresAt: new Date(Date.now() - 86400000).toISOString(),
+    accessToken: 'access_abc',
+    refreshToken: 'refresh_abc',
+    expiresAt: new Date(Date.now() + 900_000).toISOString(),
+    ssoUrl: 'https://sso.yabetoo.com',
   }
 
   it('saves and loads credentials', () => {
@@ -47,9 +42,29 @@ describe('credentials', () => {
     expect(loadCredentials()).toBeNull()
   })
 
-  it('returns null for expired credentials', () => {
-    saveCredentials(expiredCredentials)
+  it('still loads credentials with an expired access token (refresh token handles renewal)', () => {
+    const expired: CliCredentials = {
+      ...validCredentials,
+      expiresAt: new Date(Date.now() - 900_000).toISOString(),
+    }
+    saveCredentials(expired)
+    expect(loadCredentials()).toEqual(expired)
+  })
+
+  it('deletes legacy cliToken credentials and returns null', () => {
+    const credentialsPath = path.join(parentDir, '.yabetoo', 'credentials.json')
+    fs.mkdirSync(path.dirname(credentialsPath), { recursive: true })
+    fs.writeFileSync(
+      credentialsPath,
+      JSON.stringify({
+        cliToken: 'token_old',
+        accountId: 'acct_123',
+        expiresAt: new Date(Date.now() + 86400000).toISOString(),
+      })
+    )
+
     expect(loadCredentials()).toBeNull()
+    expect(fs.existsSync(credentialsPath)).toBe(false)
   })
 
   it('deletes credentials', () => {

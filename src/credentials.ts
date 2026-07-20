@@ -3,13 +3,14 @@ import path from 'node:path'
 import os from 'node:os'
 
 /**
- * Stored CLI credentials
+ * Stored CLI credentials (OAuth tokens from the SSO device authorization grant)
  */
 export interface CliCredentials {
-  cliToken: string
-  accountId: string
+  accessToken: string
+  refreshToken: string
+  /** Expiry of the access token — refreshed automatically via the refresh token */
   expiresAt: string
-  accountServiceUrl?: string
+  ssoUrl?: string
   webhookServiceUrl?: string
 }
 
@@ -64,13 +65,13 @@ export function loadCredentials(): CliCredentials | null {
     const content = fs.readFileSync(credentialsPath, 'utf-8')
     const credentials = JSON.parse(content) as CliCredentials
 
-    // Check if expired
-    if (new Date(credentials.expiresAt) < new Date()) {
-      // Token expired, delete credentials
+    // Legacy (pre-OAuth cliToken) or malformed credentials: force a re-login
+    if (!credentials.accessToken || !credentials.refreshToken || !credentials.expiresAt) {
       deleteCredentials()
       return null
     }
 
+    // An expired access token is fine here: it is renewed via the refresh token
     return credentials
   } catch {
     return null

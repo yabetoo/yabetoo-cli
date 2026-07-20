@@ -10,6 +10,8 @@ describe('loadConfig', () => {
     delete process.env.YABETOO_SECRET_KEY
     delete process.env.YABETOO_WEBHOOK_SERVICE_URL
     delete process.env.YABETOO_ACCOUNT_SERVICE_URL
+    delete process.env.YABETOO_SSO_URL
+    delete process.env.YABETOO_CLI_OAUTH_CLIENT_ID
     delete process.env.YABETOO_ACCOUNT_ID
   })
 
@@ -22,7 +24,18 @@ describe('loadConfig', () => {
     expect(config.apiKey).toBeUndefined()
     expect(config.webhookServiceUrl).toBe('https://webhook.yabetoo.com')
     expect(config.accountServiceUrl).toBe('https://account.api.yabetoopay.com')
+    expect(config.ssoUrl).toBe('https://sso.yabetoo.com')
+    expect(config.oauthClientId).toMatch(/^oauthc_/)
     expect(config.accountId).toBeUndefined()
+  })
+
+  it('reads YABETOO_SSO_URL and YABETOO_CLI_OAUTH_CLIENT_ID from env', () => {
+    process.env.YABETOO_SSO_URL = 'http://localhost:8000'
+    process.env.YABETOO_CLI_OAUTH_CLIENT_ID = 'oauthc_custom'
+
+    const config = loadConfig()
+    expect(config.ssoUrl).toBe('http://localhost:8000')
+    expect(config.oauthClientId).toBe('oauthc_custom')
   })
 
   it('reads YABETOO_API_KEY', () => {
