@@ -83,7 +83,7 @@ yabetoo listen --forward-to http://localhost:3333/webhooks --webhook-service-url
 | `YABETOO_API_KEY` | Your Yabetoo API key (sk_test_xxx or sk_live_xxx) |
 | `YABETOO_WEBHOOK_SERVICE_URL` | Custom webhook service URL |
 | `YABETOO_SSO_URL` | Yabetoo SSO URL used by `yabetoo login` (default: https://sso.yabetoo.com) |
-| `YABETOO_CLI_OAUTH_CLIENT_ID` | OAuth client id for the device flow (defaults to the dev client id) |
+| `YABETOO_CLI_OAUTH_CLIENT_ID` | OAuth client id for the device flow (defaults to the production `yabetoo-cli` client; override for a local or staging SSO) |
 | `YABETOO_ACCOUNT_ID` | Account ID (optional, extracted from API key) |
 
 ## Authentication

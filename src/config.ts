@@ -9,10 +9,10 @@ const DEFAULT_SSO_URL = "https://sso.yabetoo.com";
 /**
  * OAuth client id used for the device authorization grant (RFC 8628).
  *
- * This default is the DEV client id — production builds must override it via
- * the YABETOO_CLI_OAUTH_CLIENT_ID environment variable.
+ * Public client `yabetoo-cli` of the production SSO (no secret: the id ships in
+ * the binary). Local/staging SSOs override it via YABETOO_CLI_OAUTH_CLIENT_ID.
  */
-const DEFAULT_OAUTH_CLIENT_ID = "oauthc_01KY0GYNMD0D7HVAD87YB0Z804";
+const DEFAULT_OAUTH_CLIENT_ID = "oauthc_01M8F0C3VFEM4M2FAK3CGHKPH9";
 
 /**
  * Load configuration from environment variables
