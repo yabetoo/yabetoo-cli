@@ -95,17 +95,8 @@ export class SSEClient {
         return
       }
 
-      // Extract actual error details from ErrorEvent (eventsource v3)
-      let message = 'SSE connection error'
-      const errorEvent = event as ErrorEvent & { status?: number; message?: string }
-      if (errorEvent.message) {
-        message = errorEvent.message
-      }
-      if (errorEvent.status) {
-        message += ` (HTTP ${errorEvent.status})`
-      }
-
-      const err = new Error(message)
+      const message = event.message || 'SSE connection error'
+      const err = new Error(event.code ? `${message} (HTTP ${event.code})` : message)
       this.options.onDisconnected(err)
 
       // Attempt to reconnect
