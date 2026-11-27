@@ -90,12 +90,13 @@ export class SSEClient {
       this.options.onConnected()
     }
 
-    this.eventSource.onerror = (error) => {
+    this.eventSource.onerror = (event) => {
       if (this.isClosing) {
         return
       }
 
-      const err = error instanceof Error ? error : new Error('SSE connection error')
+      const message = event.message || 'SSE connection error'
+      const err = new Error(event.code ? `${message} (HTTP ${event.code})` : message)
       this.options.onDisconnected(err)
 
       // Attempt to reconnect
@@ -125,6 +126,13 @@ export class SSEClient {
   private reconnect(): void {
     if (this.isClosing) {
       return
+    }
+
+    // Close existing EventSource to prevent duplicate reconnections
+    // (eventsource v3 auto-reconnects internally, so we must close before creating a new one)
+    if (this.eventSource) {
+      this.eventSource.close()
+      this.eventSource = null
     }
 
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
